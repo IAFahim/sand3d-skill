@@ -82,16 +82,27 @@ Detail: `references/web-viewer.md`.
 
 ## 6. Packed exports: hidden faces, z-fighting, one atlas
 
-- A model built from boxes that touch has pairs of faces in one plane: a wall's top and the roof's underside, a stair's risers, a pillar's top under a deck. A path tracer picks one and shows nothing wrong; a rasteriser flickers between them when the material is double-sided, in bands along every wall.
-- Measure before promising. The dressed arena is 6,083 triangles: 2,188 are its ceilings, one quad to the metre; 1,612 are wall tops, bottoms and upper courses.
-- A glTF material cannot tile a corner of one image: UVs outside 0 to 1 wrap the whole atlas. A single atlas over a tiled map needs either a face per texture repeat or a bake that loses resolution. Say which one you are doing, and prove the picture did not move.
+Detail, tables and the traps: `references/packed-export.md`. Worked through on liminal-arena: 5,900 triangles and 321 draws became 2,461 and 43, with one 2048 atlas, and no picture moved.
+
+- A model built from boxes that touch has pairs of faces in one plane: a wall's top and the roof's underside, a stair's risers, a pillar's top under a deck. A path tracer picks one and shows nothing wrong; a rasteriser with double-sided materials flickers between them: z-fighting. glTF has no polygon offset, so the fix is in the asset: leave out every face that cannot be seen, never leave two faces in one plane, ship the materials single-sided.
+- Measure before promising. The dressed arena is 6,083 triangles: 2,188 are its ceilings, one quad to the metre; 1,612 are wall tops, bottoms and upper courses. What is left is cut by texture: 931 faces out of sight, then each atlas block a face crosses cuts it once. "80% fewer" was not there without moving a texel: 58% was.
+- A glTF material cannot tile a corner of one image: UVs outside 0 to 1 wrap the whole atlas. One atlas with no texel resampled needs a face per repeat of its texture, so the atlas's side trades triangles for texture: for the arena 512 is +87% triangles, 1024 −36%, 2048 −58%, and no atlas −64%. Say which you chose and why.
+- One mesh cannot be culled part by part. Draw calls fell from 323 to 45 on the aerial and from 74 to 12 on the deck, and triangles drawn per frame stayed near 2,800 in every close view, where the source culled down to 1,764 in one. Fewer calls at the same triangles is the win; say so, and keep doors apart where they must move.
+- Z-fighting to a GPU is a draw-order question. `scripts/zfight_tests.js` draws every mesh in its own colour, then again with the order turned about, and counts the pixels that changed: the published arena, 20,047 of 1.37 M from inside a roof slab; packed, 0. One camera and one size each: ask it of the views that matter, and take the count and its picture from one pass over the pixels.
+- A striped ceiling in an orbit viewer is often the camera inside a slab, its back faces against the tops of walls. Find where the camera is before hunting coplanar faces.
+- three.js casts a one-sided material's shadow from its far side unless `material.shadowSide = THREE.DoubleSide`; without it a hairline of light shows along every ceiling-wall junction indoors.
+- Merged faces leave T-junctions, a corner of one face on the edge of another, where a crack of a pixel can open. `scripts/tjunctions.py` counts them from the file alone, one rule for every edge, over every triangle where its node puts it. The arena's source has 565 such edges and its packed export 613; with the packer's `--watertight` none, at 4,664 triangles. Left in, they cost 5 single pixels in one view of thirteen; the choice is written down, not hidden.
+- Two corners within a tenth of a millimetre are one corner worked out two ways (32-bit sums, a frame per face). Left apart, each lies on the other's edge and a mending loop cuts them for ever: make them one first, put a corner on the edge's own line, never on its neighbour's, and fail aloud when an edge is cut twice.
+- A test that shares the tool's arithmetic is no proof: the packer's own texel test passed while the atlas was upside down. Ask the files from the outside, with a program that shares nothing (`tools/same_surfaces.py`: rays from 4,799 points in the air and from every face, in each file, compared).
 
 ## 7. Traps of the tool shell (each one cost time)
 
 - `pkill -f` and `pgrep -f` match the shell that runs them, because the pattern is in its own command line: the call kills itself and prints nothing. Kill by PID found from `/proc`, with the command line compared whole, or by port.
-- A helper that ignores an argument lies quietly: screenshots asked for at phone size came out at desktop size. Check the picture's real size (`magick identify`) before trusting a test that depends on it.
+- A helper that ignores an argument lies quietly: screenshots asked for at phone size came out at desktop width. Check the picture's real size (`magick identify`) before trusting a test that depends on it.
 - A file read in the same breath as the command that writes it does not exist yet: write, then read.
 - Patching a script by replacing text inside a quoted string breaks it when the text holds newlines: write the whole file.
+- A number needs its question written beside it. "T-junctions in the export" read 39, 44, 392, 555, 565, 570, 608, 611, 613 and 768 from counters that each asked it another way (per mesh or over the whole file, exact lines or a distance, corners or edges). Write the rule down, and hold every quick counter against one slow plain one.
+- A loop that will not end is found by printing its rounds, not by waiting. `PYTHONFAULTHANDLER=1` and `kill -ABRT <pid>` print where a hung Python stands.
 
 ## Done means
 

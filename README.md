@@ -12,8 +12,10 @@ Agent skills for building 3D with [sand3d](https://github.com/Sandflow-ai/sand3d
 - `scripts/sand3d-env.sh [--make]` — prints the Python that imports sand3d; with `--make`, creates one.
 - `scripts/glbinfo.py`, `scripts/glbtris.py` — what a GLB holds and where its triangles are, before against after. Nothing but Python: run them with `python -I`.
 - `scripts/render_glb.py` — one Cycles picture of a GLB, on the GPU where there is one.
+- `scripts/tjunctions.py` — the edges of a GLB where a crack of a pixel can open (a corner of one triangle on the edge of another), counted from the file alone. Nothing but Python: `python -I`.
+- `scripts/zfight_tests.js` — two tests of a model as a GPU draws it, in a page that has three.js: pixels whose surface depends on the draw order (z-fighting), and pixels left empty though drawn all round (cracks).
 - `scripts/ask.sh "<question>" body.md` — a stuck agent files a `question` issue; stronger models answer and fold the answer back in.
-- `references/` — the environment, dressing and export, Cycles, a web viewer: the longer material, with the numbers.
+- `references/` — the environment, dressing and export, Cycles, a web viewer, a packed export: the longer material, with the numbers.
 
 Every agent that learns something about sand3d pushes it here, and every stuck agent asks here: see `CONTRIBUTING.md`.
 
