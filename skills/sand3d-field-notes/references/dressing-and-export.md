@@ -56,8 +56,26 @@ Run it after every export that claims to keep the layout: `python tools/check_ar
 
 ## Reading exports back
 
-- `tools/roundtrip.py`: import the FBX, the OBJ and the `.blend` into an empty scene each, measure the meshes' world box, count textured materials, lamps and empties, and check that every image in the `.blend` is packed. The arena is x -40..40, y -28..28, z -1..7 in Blender's axes; all three measured the same.
+- `tools/roundtrip.py`: import the FBX, the OBJ and the `.blend` into an empty scene each, measure the meshes' world box, count textured materials, lamps and empties, and check that every image in the `.blend` is packed. The arena is x -40..40, y -28..28, z -1..7 in Blender's axes; all three measured the same. It also looks for this machine's home path in every file under `models/` (32 of them) and stops with the names of those that hold it (below).
 - `scripts/glbinfo.py` and `scripts/glbtris.py` here read a GLB as bytes with nothing but Python: `python -I glbtris.py before.glb after.glb` prints triangles, vertices, primitives, materials and images, by material and by node, and the difference.
+
+## No file may say where it was written
+
+- The FBX exporter, with `path_mode='COPY', embed_textures=True`, puts every texture's bytes into the file. Its name is written five times: `Video.RelativeFilename` and `Texture.RelativeFilename` as they should be, `arena_liminal.fbm/<name>.png`, a file beside the FBX; and `Video.Filename`, the `Path` property in the `Video`'s `Properties70`, and `Texture.FileName` as the path stood on the machine that ran. For 23 textures that is 70 absolute strings, and no option of the exporter leaves them out. A `.blend` can keep a path too.
+- A search of the text diff finds none of it: the files are binary, and the diff says `Bin`. Search the files themselves, before every push, for the home path and for `/tmp/`: `grep -a -c "$HOME" <file>` over every file about to be published. `tools/roundtrip.py` does it over all of `models/` and stops.
+- `unpath()` in `examples/arena_liminal.py` is the cure, run on the FBX right after the export. The file is read as the bytes it is; every string that begins with the output folder is cut to what follows it; and as the file counts its bytes, every count is made right again. It needs the binary layout of FBX 7400, which Blender writes:
+  - 23 bytes of header, then the version as a 32-bit little-endian number; the nodes begin at byte 27.
+  - A node: `EndOffset`, `NumProperties`, `PropertyListLen` (three 32-bit numbers), a one-byte name length, the name, the properties, the child nodes, and, if it has any, thirteen zeros, which are inside its `EndOffset`. Top-level nodes stand one after another without them, and thirteen zeros follow the last.
+  - A property: a type letter, then its value. `Y` 2 bytes, `C` 1, `I` and `F` 4, `D` and `L` 8. `S` and `R`: a 32-bit length, then exactly that many bytes, **and no zero after** (a reader written for a zero terminator finds nothing to cut). An array (`b`, `c`, `i`, `l`, `d`, `f`): three 32-bit numbers, the count, the encoding and the compressed length, then the values.
+  - The end: the thirteen zeros, a 16-byte ID, 4 zero bytes, zeros up to a multiple of 16 (sixteen bytes when it is one already), the version again, 120 zeros, a 16-byte mark. The last 140 bytes are put back as they are.
+  - From version 7500 on the numbers are eight bytes wide: the function refuses those, by name.
+- What proved it: a file with nothing to cut comes back the same bytes; the 70 strings cut and the 117 names beginning `arena_liminal.fbm/` left; a second run changes nothing; all 11,941 nodes written again in their order, each property list as long as it says; and Blender imports the file from before and the one from after to the same 233 objects, 200 meshes, 29 materials and 23 images, with the same rows and the same pixels in every image. Only the image's `filepath` differs, and the new one is found from the embedded bytes by a relative name.
+
+## Two builds against each other
+
+- The GLB, the OBJ and the JSON come out of two builds in two folders as the same bytes. An FBX does not: `CreationTimeStamp` holds the second it was written, and its object IDs are made from Python's `hash()`, which changes with the process's seed. A `.blend` differs between two saves in about 330 small counters of its node trees.
+- `PYTHONHASHSEED=0` takes the IDs out: two builds of one code, in two folders, gave the same 20,114 records with the second and the millisecond of the time stamp apart, and nothing else. Without it 2,236 ID longs differ (`Model`, `Geometry`, `NodeAttribute`, `Material`, `Texture`, `Video`, `Document` and the `Connections` to them).
+- So `cmp` says only that two FBX files are not the same. Read them record by record, with a walker over the layout above, and look at what differs by type: integers of the time stamp, longs of IDs, and strings. A string that differs is the one to read.
 
 ## The triangles of the dressed arena, by material
 

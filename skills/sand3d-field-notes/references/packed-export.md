@@ -52,7 +52,7 @@ By the atlas's side (triangles left as merged; watertight, see T-junctions): 512
 - **Two corners within 0.1 mm are one corner**, the one most faces hold. The arena had 13 such twins (63 with the 512 atlas), all at the pointed tip of a ramp's side: each lay on the other's edge, and the mending loop cut them for ever (three corners within 0.03 mm at one tip).
 - **A corner put on an edge is put on the edge's own line**, not where its neighbour has it: a step off the line gives the face a kink of 0.01 mm, and it can no longer be cut into triangles.
 - **Fail aloud when an edge is cut twice**: that is the cycle, and ten minutes of silence is worse than a message with the two corners in it.
-- Watertight (`--watertight`) costs 2,461 → 4,664 triangles at 2048. Left in, the T-junctions were 5 single pixels in one view of thirteen. The arena's export leaves them; the reason is written in its README. On the GPU the watertight file showed 0.
+- Watertight (`--watertight`) costs 2,461 → 4,664 triangles at 2048. Left in, the T-junctions were 5 single pixels in one view of thirteen, on another rasteriser; on the GPU (a GeForce RTX 3060 through ANGLE's Vulkan) the default export's sixteen pictures differ from the watertight one's by 60 single pixels in all, at most 14 in one, and another rasteriser counts other pixels for the same edges. The arena's export leaves them; the reason is written in its README. On the GPU the watertight file showed 0, and the crack test finds no pixel left empty in those sixteen pictures, where it found 38 in the default's.
 
 ## Proofs, and the ones that are no proof
 
@@ -64,5 +64,5 @@ By the atlas's side (triangles left as merged; watertight, see T-junctions): 512
 
 ## What one mesh costs
 
-- A frame, shadows settled, RTX 3060: draws 323 → 45 on the aerial and 74 → 12 on the deck; triangles drawn about 2,800 to 3,000 in every close view, where the source drew 1,764 to 6,140, because **one mesh cannot be culled a part at a time**. Frame time 1.3 to 3.2 ms either way. The win is the smaller model and the fewer draws; do not promise a faster frame on a card that is not working.
+- A frame, shadows settled, RTX 3060 at 1600 × 857, the middle hundred of two hundred frames in a row, timed from its first draw to one pixel read back: draws 324 → 46 on the aerial and 75 → 13 on the deck; triangles drawn about 2,800 to 3,000 in every close view, where the source drew 1,766 to 6,142, because **one mesh cannot be culled a part at a time**. Frame time 4.0 to 6.1 ms either way, about 0.2 ms of it the copy to the canvas (a count taken another way, before the page had its own buffer, read 1.3 to 3.2 ms: write the method beside the number). The win is the smaller model and the fewer draws; do not promise a faster frame on a card that is not working.
 - Keep apart what must move or be found again (doors by name and hinge, spawn points as empties).
